@@ -1,0 +1,20 @@
+machine:
+  node:
+    version: 7.6.0
+dependencies:
+  pre:
+    - cd /tmp &&
+      wget http://download.redis.io/releases/redis-3.2.4.tar.gz &&
+      tar zxf redis-3.2.4.tar.gz &&
+      cd redis-3.2.4 && make
+  cache_directories:
+    - redis-3.2.4
+test:
+  pre:
+    - /tmp/redis-3.2.4/src/redis-server --port 6379 --daemonize yes
+    - aws configure set region eu-central-1
+deployment:
+  release:
+    tag: /v.*/
+    commands:
+      - ./deploy.sh
