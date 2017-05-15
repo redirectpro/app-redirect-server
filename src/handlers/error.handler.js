@@ -1,5 +1,5 @@
 import LoggerHandler from '../handlers/logger.handler'
-const logger = LoggerHandler
+const logger = new LoggerHandler()
 
 class CustomError extends Error {
   constructor (name, message) {
