@@ -13,6 +13,8 @@ test:
   pre:
     - /tmp/redis-3.2.4/src/redis-server --port 6379 --daemonize yes
     - aws configure set region eu-central-1
+  override:
+    - npm run codacy-coverage
 deployment:
   release:
     tag: /v.*/
