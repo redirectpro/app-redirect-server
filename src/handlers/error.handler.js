@@ -11,7 +11,7 @@ class CustomError extends Error {
 // error handler
 export default class ErrorHandler {
 
-  static responseError (err, req, res, next) {
+  response (err, req, res, next) {
     let status = err.statusCode || 500
 
     if (err.name === 'UnauthorizedError') {
@@ -29,18 +29,7 @@ export default class ErrorHandler {
     if (next) next()
   }
 
-  static makeSureErrorIsNull (err, content) {
-    if (!err && typeof (content) === 'string' && content === 'NotFound') {
-      err = {
-        name: 'UserNotFound',
-        message: 'User not found.'
-      }
-    }
-
-    return err
-  }
-
-  static typeError (name, message) {
+  custom (name, message) {
     return new CustomError(name, message)
   }
 }

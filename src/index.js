@@ -15,7 +15,8 @@ class App {
     this.app.use(routes())
 
     // Formata error genericos
-    this.app.use(ErrorHandler.responseError)
+    const error = new ErrorHandler()
+    this.app.use(error.response)
   }
 
   startListen () {
@@ -31,10 +32,6 @@ class App {
   initialize () {
     this.prepar()
     this.startListen()
-  }
-
-  returnApp () {
-    return this.app
   }
 }
 

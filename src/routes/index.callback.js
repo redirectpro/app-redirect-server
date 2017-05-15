@@ -2,7 +2,7 @@ import conn from '../connections'
 import config from '../config'
 
 exports.all = (req, res) => {
-  const host = req.get('host').split(':')[0]
+  const host = req.host.split(':')[0]
   const path = req.originalUrl.split('?')[0]
   let params = ''
 
@@ -21,15 +21,16 @@ exports.all = (req, res) => {
     },
     Limit: 1
   }
-  // res.status(200).send('ok');
+
   // Needed super refactore to avoid regular access to s3. Must store in redis
   // to facility to flush cache.
   conn.dyndb.scan(scanParams, (err, data) => {
-    if (err || data.Count === 0 || !data.Items[0].objectKey) return res.status(200).send('not found')
-    let hostTarget = data.Items[0].hostTarget
+    if (err || data.Count === 0 || !data.Items[0].objectKey) return res.status(404).send('Not found.')
+    const targetProtocol = data.Items[0].targetProtocol
+    let targetHost = data.Items[0].targetHost
 
-    if (!/^http[s]?:/.hostTarget) {
-      hostTarget = 'http://' + hostTarget
+    if (!/^http[s]?:/.targetHost) {
+      targetHost = `${targetProtocol}://${targetHost}`
     }
 
     const s3Params = { Bucket: config.awsS3Bucket, Key: data.Items[0].objectKey }
@@ -39,12 +40,12 @@ exports.all = (req, res) => {
       const match = body.find((e) => e.from === path)
 
       if (match) {
-        return res.redirect(match.statusCode || 301, hostTarget + '/' + match.to + params)
+        return res.redirect(match.statusCode || 301, targetHost + '' + match.to + params)
       } else {
-        return res.status(200).send('not matched')
+        return res.status(200).send('URL does not match.')
       }
     }).catch((err) => {
-      return res.status(200).send(err.message)
+      return res.status(500).send(err.message)
     })
   })
 }
