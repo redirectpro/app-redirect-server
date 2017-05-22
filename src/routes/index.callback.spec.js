@@ -24,7 +24,7 @@ describe('./routes/index.callback', () => {
 
     before(() => {
       stubConnS3GetObject = sinon.stub(conn.s3, 'getObject')
-      stubConnS3GetObject.callsFake((params) => {
+      stubConnS3GetObject.callsFake(() => {
         return {
           promise: () => {
             return Promise.resolve({
@@ -136,7 +136,7 @@ describe('./routes/index.callback', () => {
         originalUrl: '/y'
       })
 
-      sinon.stub(conn.dyndb, 'get').callsFake((params) => {
+      sinon.stub(conn.dyndb, 'get').callsFake(() => {
         return {
           promise: () => {
             return Promise.resolve({})
