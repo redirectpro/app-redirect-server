@@ -24,7 +24,7 @@ describe('./routes/index.callback', () => {
 
     before(() => {
       stubConnS3GetObject = sinon.stub(conn.s3, 'getObject')
-      stubConnS3GetObject.callsFake(() => {
+      stubConnS3GetObject.callsFake((params) => {
         return {
           promise: () => {
             return Promise.resolve({
@@ -44,21 +44,31 @@ describe('./routes/index.callback', () => {
 
     it('success', (done) => {
       const req = mocksHttp.createRequest({
-        host: 'cnn.com',
+        hostname: 'cnn.com',
         originalUrl: '/a?myParam=value'
       })
 
-      sinon.stub(conn.dyndb, 'scan').callsFake((params, cb) => {
-        cb(null, {
-          Count: 1,
-          Items: [
-            {
-              objectKey: 'a/b/c/file.json',
-              targetHost: 'www.cnn.com',
-              targetProtocol: 'https'
+      sinon.stub(conn.dyndb, 'get').callsFake((params) => {
+        return {
+          promise: () => {
+            if (params.TableName === 'rp_dev_redirect_hostsource') {
+              return Promise.resolve({
+                Item: {
+                  applicationId: 'app-id',
+                  redirectId: 'redirect-id'
+                }
+              })
+            } else {
+              return Promise.resolve({
+                Item: {
+                  objectKey: 'a/b/c/file.json',
+                  targetHost: 'www.cnn.com',
+                  targetProtocol: 'https'
+                }
+              })
             }
-          ]
-        })
+          }
+        }
       })
 
       res.on('end', () => {
@@ -66,7 +76,7 @@ describe('./routes/index.callback', () => {
           const data = res._getRedirectUrl()
           expect(res.statusCode).to.be.equal(301)
           expect(data).to.be.equal('https://www.cnn.com/b?myParam=value')
-          conn.dyndb.scan.restore()
+          conn.dyndb.get.restore()
           done()
         } catch (err) {
           done(err)
@@ -78,21 +88,31 @@ describe('./routes/index.callback', () => {
 
     it('should return not matched', (done) => {
       const req = mocksHttp.createRequest({
-        host: 'cnn.com',
+        hostname: 'cnn.com',
         originalUrl: '/y'
       })
 
-      sinon.stub(conn.dyndb, 'scan').callsFake((params, cb) => {
-        cb(null, {
-          Count: 1,
-          Items: [
-            {
-              objectKey: 'a/b/c/file.json',
-              targetHost: 'www.cnn.com',
-              targetProtocol: 'https'
+      sinon.stub(conn.dyndb, 'get').callsFake((params) => {
+        return {
+          promise: () => {
+            if (params.TableName === 'rp_dev_redirect_hostsource') {
+              return Promise.resolve({
+                Item: {
+                  applicationId: 'app-id',
+                  redirectId: 'redirect-id'
+                }
+              })
+            } else {
+              return Promise.resolve({
+                Item: {
+                  objectKey: 'a/b/c/file.json',
+                  targetHost: 'www.cnn.com',
+                  targetProtocol: 'https'
+                }
+              })
             }
-          ]
-        })
+          }
+        }
       })
 
       res.on('end', () => {
@@ -100,7 +120,7 @@ describe('./routes/index.callback', () => {
           const data = res._getData()
           expect(res.statusCode).to.be.equal(200)
           expect(data).to.be.equal('URL does not match.')
-          conn.dyndb.scan.restore()
+          conn.dyndb.get.restore()
           done()
         } catch (err) {
           done(err)
@@ -112,23 +132,24 @@ describe('./routes/index.callback', () => {
 
     it('should return not found', (done) => {
       const req = mocksHttp.createRequest({
-        host: 'cnn.com',
+        hostname: 'cnn.com',
         originalUrl: '/y'
       })
 
-      sinon.stub(conn.dyndb, 'scan').callsFake((params, cb) => {
-        cb(null, {
-          Count: 0,
-          Items: []
-        })
+      sinon.stub(conn.dyndb, 'get').callsFake((params) => {
+        return {
+          promise: () => {
+            return Promise.resolve({})
+          }
+        }
       })
 
       res.on('end', () => {
         try {
           const data = res._getData()
           expect(res.statusCode).to.be.equal(404)
-          expect(data).to.be.equal('Not found.')
-          conn.dyndb.scan.restore()
+          expect(data).to.be.equal('Not Found.')
+          conn.dyndb.get.restore()
           done()
         } catch (err) {
           done(err)
@@ -140,21 +161,31 @@ describe('./routes/index.callback', () => {
 
     it('should return generic error', (done) => {
       const req = mocksHttp.createRequest({
-        host: 'cnn.com',
+        hostname: 'cnn.com',
         originalUrl: '/y'
       })
 
-      sinon.stub(conn.dyndb, 'scan').callsFake((params, cb) => {
-        cb(null, {
-          Count: 1,
-          Items: [
-            {
-              objectKey: 'a/b/c/file.json',
-              targetHost: 'www.cnn.com',
-              targetProtocol: 'https'
+      sinon.stub(conn.dyndb, 'get').callsFake((params) => {
+        return {
+          promise: () => {
+            if (params.TableName === 'rp_dev_redirect_hostsource') {
+              return Promise.resolve({
+                Item: {
+                  applicationId: 'app-id',
+                  redirectId: 'redirect-id'
+                }
+              })
+            } else {
+              return Promise.resolve({
+                Item: {
+                  objectKey: 'a/b/c/file.json',
+                  targetHost: 'www.cnn.com',
+                  targetProtocol: 'https'
+                }
+              })
             }
-          ]
-        })
+          }
+        }
       })
 
       stubConnS3GetObject.callsFake(() => {
@@ -173,7 +204,7 @@ describe('./routes/index.callback', () => {
           const data = res._getData()
           expect(res.statusCode).to.be.equal(500)
           expect(data).to.be.equal('message')
-          conn.dyndb.scan.restore()
+          conn.dyndb.get.restore()
           done()
         } catch (err) {
           done(err)
