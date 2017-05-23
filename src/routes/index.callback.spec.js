@@ -10,7 +10,7 @@ const expect = chai.expect
 
 chai.use(chaiJsonSchema)
 
-describe('./routes/index.callback', () => {
+describe.only('./routes/index.callback', () => {
   let res
 
   beforeEach(() => {
@@ -29,7 +29,7 @@ describe('./routes/index.callback', () => {
           promise: () => {
             return Promise.resolve({
               Body: new Buffer(JSON.stringify([
-                { from: '/a', to: '/b' },
+                { from: '/a\\?(.*)', to: '/b?$1' },
                 { from: '/home', to: '/' }
               ]))
             })
@@ -76,50 +76,6 @@ describe('./routes/index.callback', () => {
           const data = res._getRedirectUrl()
           expect(res.statusCode).to.be.equal(301)
           expect(data).to.be.equal('https://www.cnn.com/b?myParam=value')
-          conn.dyndb.get.restore()
-          done()
-        } catch (err) {
-          done(err)
-        }
-      })
-
-      indexCallback.all(req, res)
-    })
-
-    it('should return not matched', (done) => {
-      const req = mocksHttp.createRequest({
-        hostname: 'cnn.com',
-        originalUrl: '/y'
-      })
-
-      sinon.stub(conn.dyndb, 'get').callsFake((params) => {
-        return {
-          promise: () => {
-            if (params.TableName === 'rp_dev_redirect_hostsource') {
-              return Promise.resolve({
-                Item: {
-                  applicationId: 'app-id',
-                  redirectId: 'redirect-id'
-                }
-              })
-            } else {
-              return Promise.resolve({
-                Item: {
-                  objectKey: 'a/b/c/file.json',
-                  targetHost: 'www.cnn.com',
-                  targetProtocol: 'https'
-                }
-              })
-            }
-          }
-        }
-      })
-
-      res.on('end', () => {
-        try {
-          const data = res._getData()
-          expect(res.statusCode).to.be.equal(200)
-          expect(data).to.be.equal('URL does not match.')
           conn.dyndb.get.restore()
           done()
         } catch (err) {
