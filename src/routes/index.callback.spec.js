@@ -10,7 +10,7 @@ const expect = chai.expect
 
 chai.use(chaiJsonSchema)
 
-describe.only('./routes/index.callback', () => {
+describe('./routes/index.callback', () => {
   let res
 
   beforeEach(() => {
