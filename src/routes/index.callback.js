@@ -5,21 +5,15 @@ import ErrorHandler from '../handlers/error.handler'
 const errorHandler = new ErrorHandler()
 
 exports.all = (req, res) => {
-  const host = req.hostname.split(':')[0]
-  const path = req.originalUrl.split('?')[0]
-  let finalTargetHost
-  let params = ''
-
-  if (req.originalUrl.split('?')[1]) {
-    params = '?' + req.originalUrl.split('?')[1]
-  }
-
+  const hostname = req.hostname.split(':')[0]
+  const originalUrl = req.originalUrl
+  let targetHost
   let getParams
 
   getParams = {
     TableName: `${config.dynamodbPrefix}redirect_hostsource`,
     Key: {
-      hostsource: host
+      hostsource: hostname
     }
   }
 
@@ -42,21 +36,14 @@ exports.all = (req, res) => {
       throw errorHandler.custom('NotFound', 'Not Found.')
     }
 
-    const targetProtocol = data.Item.targetProtocol
-    const targetHost = data.Item.targetHost
-    finalTargetHost = `${targetProtocol}://${targetHost}`
+    targetHost = `${data.Item.targetProtocol}://${data.Item.targetHost}`
 
     const s3Params = { Bucket: config.awsS3Bucket, Key: data.Item.objectKey }
 
     return conn.s3.getObject(s3Params).promise()
   }).then((data) => {
-    const body = JSON.parse(data.Body.toString())
-    const match = body.find((e) => e.from === path)
-    if (match) {
-      return res.redirect(match.statusCode || 301, finalTargetHost + '' + match.to + params)
-    } else {
-      return res.status(200).send('URL does not match.')
-    }
+    const targetUrl = getTargetUrl(originalUrl, JSON.parse(data.Body.toString()))
+    return res.redirect(301, `${targetHost}${targetUrl}`)
   }).catch((err) => {
     if (err.name === 'NotFound') {
       return res.status(404).send(err.message)
@@ -64,4 +51,22 @@ exports.all = (req, res) => {
       return res.status(500).send(err.message)
     }
   })
+}
+
+function getTargetUrl (url, body) {
+  body.push({ 'from': '^/([^?]+)\\??(.*)?$', to: '/$1?$2' })
+  let targetUrl = ''
+  body.forEach((e) => {
+    if (!targetUrl) {
+      if (e.from[0] !== '^') e.from = `^${e.from}`
+      if (e.from.substr(-1) !== '$') e.from = `${e.from}$`
+      const re = new RegExp(e.from)
+      if (url.match(re)) {
+        targetUrl = url.replace(re, e.to)
+      }
+    }
+  })
+  body = undefined
+  if (targetUrl.substr(-1) === '?') targetUrl = targetUrl.slice(0, -1)
+  return targetUrl
 }
