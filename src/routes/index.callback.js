@@ -20,7 +20,7 @@ exports.all = (req, res) => {
   // Needed super refactore to avoid regular access to s3. Must store in redis
   // to facility to flush cache.
   conn.dyndb.get(getParams).promise().then((data) => {
-    if (!data.Item) throw errorHandler.custom('NotFound', 'Not Found.')
+    if (!data.Item) throw errorHandler.custom('HostNotFound', 'Host Not Found.')
 
     getParams = {
       TableName: `${config.dynamodbPrefix}redirect`,
@@ -33,7 +33,7 @@ exports.all = (req, res) => {
     return conn.dyndb.get(getParams).promise()
   }).then((data) => {
     if (!data.Item || !data.Item.objectKey) {
-      throw errorHandler.custom('NotFound', 'Not Found.')
+      throw errorHandler.custom('RedirectNotFound', 'Redirect Not Found.')
     }
 
     targetHost = `${data.Item.targetProtocol}://${data.Item.targetHost}`
@@ -45,7 +45,7 @@ exports.all = (req, res) => {
     const targetUrl = getTargetUrl(originalUrl, JSON.parse(data.Body.toString()))
     return res.redirect(301, `${targetHost}${targetUrl}`)
   }).catch((err) => {
-    if (err.name === 'NotFound') {
+    if (err.name === 'HostNotFound' || err.name === 'RedirectNotFound') {
       return res.status(404).send(err.message)
     } else {
       return res.status(500).send(err.message)
