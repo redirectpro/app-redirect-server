@@ -32,15 +32,21 @@ exports.all = (req, res) => {
 
     return conn.dyndb.get(getParams).promise()
   }).then((data) => {
-    if (!data.Item || !data.Item.objectKey) {
+    if (!data.Item) {
       throw errorHandler.custom('RedirectNotFound', 'Redirect Not Found.')
     }
 
     targetHost = `${data.Item.targetProtocol}://${data.Item.targetHost}`
 
-    const s3Params = { Bucket: config.awsS3Bucket, Key: data.Item.objectKey }
+    /* Get FromTo when setted */
+    if (data.Item.objectKey) {
+      const s3Params = { Bucket: config.awsS3Bucket, Key: data.Item.objectKey }
+      return conn.s3.getObject(s3Params).promise()
 
-    return conn.s3.getObject(s3Params).promise()
+    /* Redirect to main domain when FromTo does not exist */
+    } else {
+      return { Body: '[]' }
+    }
   }).then((data) => {
     const targetUrl = getTargetUrl(originalUrl, JSON.parse(data.Body.toString()))
     return res.redirect(301, `${targetHost}${targetUrl}`)
