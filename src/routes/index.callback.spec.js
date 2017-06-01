@@ -86,7 +86,7 @@ describe('./routes/index.callback', () => {
       indexCallback.all(req, res)
     })
 
-    it('should return not found', (done) => {
+    it('should return Host Not Found', (done) => {
       const req = mocksHttp.createRequest({
         hostname: 'cnn.com',
         originalUrl: '/y'
@@ -104,7 +104,45 @@ describe('./routes/index.callback', () => {
         try {
           const data = res._getData()
           expect(res.statusCode).to.be.equal(404)
-          expect(data).to.be.equal('Not Found.')
+          expect(data).to.be.equal('Host Not Found.')
+          conn.dyndb.get.restore()
+          done()
+        } catch (err) {
+          done(err)
+        }
+      })
+
+      indexCallback.all(req, res)
+    })
+
+    it('should return Redirect Not Found', (done) => {
+      const req = mocksHttp.createRequest({
+        hostname: 'cnn.com',
+        originalUrl: '/y'
+      })
+
+      sinon.stub(conn.dyndb, 'get').callsFake((params) => {
+        return {
+          promise: () => {
+            if (params.TableName === 'rp_dev_redirect_hostsource') {
+              return Promise.resolve({
+                Item: {
+                  applicationId: 'app-id',
+                  redirectId: 'redirect-id'
+                }
+              })
+            } else {
+              return Promise.resolve({})
+            }
+          }
+        }
+      })
+
+      res.on('end', () => {
+        try {
+          const data = res._getData()
+          expect(res.statusCode).to.be.equal(404)
+          expect(data).to.be.equal('Redirect Not Found.')
           conn.dyndb.get.restore()
           done()
         } catch (err) {
